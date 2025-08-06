@@ -1,0 +1,26 @@
+{
+  "name": "stationery-requirements",
+  "version": "1.0.0",
+  "description": "A React application for managing stationery requirements and generating Excel reports.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "formik": "^2.2.6",
+    "yup": "^0.32.11",
+    "xlsx": "^0.17.0",
+    "@mui/material": "^5.0.0",
+    "@mui/icons-material": "^5.0.0",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-scripts": "4.0.3"
+  },
+  "devDependencies": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
