@@ -1,11 +1,11 @@
 import React from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Paper,
   Typography,
   IconButton
@@ -40,7 +40,15 @@ export const ItemsTable = ({ items, handleRemoveItem }) => (
               <TableCell>{item.quantity}</TableCell>
               <TableCell>{item.estimatedBudget} BD</TableCell>
               <TableCell>{item.budgetAvailable ? 'Yes' : 'No'}</TableCell>
-              <TableCell>{item.picture ? '✅' : '❌'}</TableCell>
+              <TableCell>
+                {item.picture ? (
+                  <img
+                    src={item.picture.dataUrl}
+                    alt={item.picture.name}
+                    style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8 }}
+                  />
+                ) : '❌'}
+              </TableCell>
               <TableCell>
                 <IconButton onClick={() => handleRemoveItem(index)}>
                   <DeleteIcon color="error" />
