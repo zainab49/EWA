@@ -42,23 +42,6 @@ This system allows staff to submit official requests, attach item images, and ge
 - **Excel Export:** [ExcelJS](https://github.com/exceljs/exceljs)
 - **File Saving:** [FileSaver.js](https://github.com/eligrey/FileSaver.js)
 
----
-
-## 📂 Project Structure
-
-```
-src/
-├── components/
-│   ├── StationeryForm/
-│   │   └── StationeryForm.js   # Main form component
-│   ├── ItemForm.js             # Item input component (if used separately)
-│   ├── ItemsTable.js           # Items list display
-│   └── ...
-├── constants.js                 # Static constants (units, etc.)
-├── FormFields.js                # Contact form fields
-├── validationSchema.js          # Form validation rules (Yup schema)
-├── index.js                     # Entry point
-```
 
 ---
 
