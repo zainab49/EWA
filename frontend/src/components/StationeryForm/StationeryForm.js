@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Card, CardContent, Typography, TextField, Button, Select, MenuItem, FormControl, InputLabel, Checkbox, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, Divider, Alert } from '@mui/material';
+import { Card, CardContent, Typography, TextField, Button, Select, MenuItem, FormControl, InputLabel, Checkbox, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box,  Alert } from '@mui/material';
 import { Business, Phone, Email, Description, Add, Delete, GetApp } from '@mui/icons-material';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+
 
 const FormalStationeryForm = () => {
   const [formData, setFormData] = useState({
@@ -26,24 +27,24 @@ const FormalStationeryForm = () => {
   const [errors, setErrors] = useState({});
 
   const fileToDataUrl = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result); // data:image/...;base64,XXXX
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
-const handlePictureChange = async (event) => {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-  const dataUrl = await fileToDataUrl(file);
-  setItemPicture({
-    name: file.name,
-    type: file.type, // image/png
-    dataUrl,         // data:image/png;base64,XXXX
-  });
-};
+  const handlePictureChange = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const dataUrl = await fileToDataUrl(file);
+    setItemPicture({
+      name: file.name,
+      type: file.type,
+      dataUrl,
+    });
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -63,7 +64,7 @@ const handlePictureChange = async (event) => {
   };
 
   const validateCurrentItem = () => {
-    return currentItem.description && currentItem.unit && currentItem.quantity && currentItem.estimatedBudget;
+    return currentItem.description && currentItem.unit && currentItem.quantity && currentItem.estimatedBudget && itemPicture;
   };
 
   const handleFormChange = (field, value) => {
@@ -78,473 +79,733 @@ const handlePictureChange = async (event) => {
   };
 
   const handleAddItem = () => {
-    if (validateCurrentItem()) {
-      const newItem = {
-        ...currentItem,
-        picture: itemPicture ? { ...itemPicture } : null,
-      };
-      setItems(prev => [...prev, newItem]);
-      setCurrentItem({
-        description: '',
-        unit: '',
-        quantity: '',
-        estimatedBudget: '',
-        budgetAvailable: false,
-      });
-      setItemPicture(null);
-      if (errors.items) {
-        setErrors(prev => ({ ...prev, items: '' }));
-      }
+    if (!itemPicture) {
+      setErrors((prev) => ({ ...prev, itemPicture: 'Picture is required' }));
+      return;
     }
+    if (!validateCurrentItem()) return;
+
+    const newItem = {
+      ...currentItem,
+      picture: itemPicture ? { ...itemPicture } : null,
+    };
+    setItems(prev => [...prev, newItem]);
+    setCurrentItem({
+      description: '',
+      unit: '',
+      quantity: '',
+      estimatedBudget: '',
+      budgetAvailable: false,
+    });
+    setItemPicture(null);
+    setErrors(prev => ({ ...prev, items: '', itemPicture: '' }));
   };
 
   const handleRemoveItem = (index) => {
     setItems(prev => prev.filter((_, i) => i !== index));
   };
 
- 
+  const generateCSV = () => {
+    if (!validateForm()) return;
 
-
-
-const generateExcel = async () => {
-  if (!validateForm()) return;
-
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Stationery Requirements');
-
-  
-  ws.columns = [
-    { header: 'St. No', key: 'sno', width: 8 },
-    { header: 'Item Description', key: 'desc', width: 40 },
-    { header: 'Unit', key: 'unit', width: 12 },
-    { header: 'Quantity', key: 'qty', width: 10 },
-    { header: 'Estimated Budget (BD)', key: 'budget', width: 22 },
-    { header: 'Budget Available', key: 'avail', width: 16 },
-    { header: 'Picture', key: 'pic', width: 18 }, // مكان الصورة
-  ];
-
- 
-  ws.mergeCells('A1:G1');
-  ws.getCell('A1').value = 'Electricity and Water Authority';
-  ws.getCell('A1').font = { bold: true, size: 16 };
-  ws.getCell('A1').alignment = { vertical: 'middle', horizontal: 'center' };
-
-  ws.mergeCells('A2:G2');
-  ws.getCell('A2').value = 'STATIONERY REQUIREMENTS FORM';
-  ws.getCell('A2').font = { bold: true, size: 14 };
-  ws.getCell('A2').alignment = { vertical: 'middle', horizontal: 'center' };
-
- 
-  const infoStart = 4;
-  ws.getCell(`A${infoStart}`).value = 'Directorate:'; ws.getCell(`B${infoStart}`).value = formData.directorate;
-  ws.getCell(`A${infoStart+1}`).value = 'Section:'; ws.getCell(`B${infoStart+1}`).value = formData.section;
-  ws.getCell(`A${infoStart+2}`).value = 'Contact Person:'; ws.getCell(`B${infoStart+2}`).value = formData.contactName;
-  ws.getCell(`A${infoStart+3}`).value = 'Tel No.:'; ws.getCell(`B${infoStart+3}`).value = formData.contactPhone;
-  ws.getCell(`A${infoStart+4}`).value = 'Email:'; ws.getCell(`B${infoStart+4}`).value = formData.contactEmail;
-
-  
-  const headerRowIdx = infoStart + 6;
-  const headerRow = ws.getRow(headerRowIdx);
-  headerRow.values = ['St. No', 'Item Description', 'Unit', 'Quantity', 'Estimated Budget', 'Budget Available', 'Picture'];
-  headerRow.font = { bold: true };
-  headerRow.alignment = { horizontal: 'center' };
-  headerRow.eachCell((cell) => {
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } };
-    cell.border = { top: {style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
-  });
-
-  
-  let currentRow = headerRowIdx + 1;
-
-  for (let i = 0; i < items.length; i++) {
-    const it = items[i];
-    const row = ws.getRow(currentRow);
-    row.values = [
-      i + 1,
-      it.description,
-      it.unit,
-      Number(it.quantity) || 0,
-      `${it.estimatedBudget} BD`,
-      it.budgetAvailable ? 'Y' : 'N',
-      '' 
+    const headers = ['S.No', 'Item Description', 'Unit', 'Quantity', 'Estimated Budget (BD)', 'Budget Available'];
+    const csvData = [
+      ['ELECTRICITY AND WATER AUTHORITY'],
+      ['STATIONERY REQUIREMENTS FORM'],
+      [`Date: ${new Date().toLocaleDateString('en-GB')}`],
+      [],
+      ['CONTACT INFORMATION'],
+      [`Directorate: ${formData.directorate}`],
+      [`Section: ${formData.section}`],
+      [`Contact Person: ${formData.contactName}`],
+      [`Phone Number: ${formData.contactPhone}`],
+      [`Email Address: ${formData.contactEmail}`],
+      [],
+      headers,
+      ...items.map((item, index) => [
+        index + 1,
+        item.description,
+        item.unit,
+        item.quantity,
+        `${item.estimatedBudget} BD`,
+        item.budgetAvailable ? 'Yes' : 'No'
+      ]),
+      [],
+      ['SUMMARY'],
+      [`Total Items: ${items.length}`],
+      [`Items with Budget Available: ${items.filter(item => item.budgetAvailable).length} of ${items.length}`],
+      [`Total Estimated Budget: ${items.reduce((sum, item) => sum + parseFloat(item.estimatedBudget || 0), 0).toFixed(3)} BD`]
     ];
-    row.alignment = { vertical: 'middle' };
-    row.height = 70; 
 
-   
-    row.eachCell((cell) => {
-      cell.border = { top: {style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
-      if (cell.col === 6) cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    });
-
-    // add image if exists
-    if (it.picture && it.picture.dataUrl) {
-      // ExcelJS  
-      const base64 = it.picture.dataUrl.split(',')[1];
-      
-      const ext = (it.picture.type || '').includes('png') ? 'png'
-                : (it.picture.type || '').includes('jpeg') ? 'jpeg'
-                : 'png';
-
-      const imageId = wb.addImage({
-        base64, 
-        extension: ext,
-      });
-
-      
-      ws.addImage(imageId, {
-        tl: { col: 6.1, row: currentRow - 1 + 0.15 }, 
-        br: { col: 6.9, row: currentRow - 1 + 0.95 }, 
-        editAs: 'oneCell',
-      });
-    }
-
-    currentRow++;
-  }
-
-  // generate buffer and trigger download
-  const buf = await wb.xlsx.writeBuffer();
-  const filename = `Stationery_Requirements_${new Date().toISOString().slice(0,10)}.xlsx`;
-  saveAs(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
-};
-
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `EWA_Stationery_Requirements_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
 
   return (
-    <Box sx={{ 
+    <div style={{ 
       minHeight: '100vh', 
-      backgroundColor: '#f5f7fa',
-      py: 4
+      backgroundColor: '#f7fafc',
+      padding: '2rem 0',
+      fontFamily: 'Georgia, serif'
     }}>
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-        {/* Header */}
-        <Card sx={{ mb: 4, boxShadow: 3 }}>
-          <CardContent sx={{ textAlign: 'center', py: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-              <Business sx={{ fontSize: 40, color: '#1976d2', mr: 2 }} />
-              <Typography variant="h3" sx={{ fontWeight: 700, color: '#1976d2' }}>
-                Electricity and Water Authority
-              </Typography>
-            </Box>
-            <Typography variant="h5" sx={{ fontWeight: 600, color: '#424242', mb: 1 }}>
-              STATIONERY REQUIREMENTS FORM
-            </Typography>
-            <Typography variant="body1" sx={{ color: '#666' }}>
-              Please fill out all required fields and add items to generate the requirements sheet
-            </Typography>
-          </CardContent>
-        </Card>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
+        
+        {/* Header - Formal Styling */}
+        <div style={{
+          marginBottom: '2rem',
+          backgroundColor: '#ffffff',
+          border: '1px solid #cbd5e0',
+          borderRadius: '4px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          padding: '2.5rem',
+          textAlign: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+            <svg style={{ width: '36px', height: '36px', marginRight: '1rem', fill: '#1a365d' }} viewBox="0 0 24 24">
+              <path d="M12,7V3H2V21H22V7H12M6,19H4V17H6V19M6,15H4V13H6V15M6,11H4V9H6V11M6,7H4V5H6V7M10,19H8V17H10V19M10,15H8V13H10V15M10,11H8V9H10V11M10,7H8V5H10V7M20,19H12V17H20V19M20,15H12V13H20V15M20,11H12V9H20V11Z"/>
+            </svg>
+            <h1 style={{ 
+              fontSize: '2rem',
+              fontWeight: '700', 
+              color: '#1a365d',
+              margin: '0',
+              letterSpacing: '0.5px'
+            }}>
+              ELECTRICITY AND WATER AUTHORITY
+            </h1>
+          </div>
+          <h2 style={{ 
+            fontSize: '1.5rem',
+            fontWeight: '600', 
+            color: '#2d3748', 
+            margin: '0.5rem 0',
+          }}>
+            STATIONERY REQUIREMENTS FORM
+          </h2>
+          <p style={{ color: '#4a5568', margin: '0', fontSize: '0.9rem' }}>
+            Official Form for Stationery Procurement Requests
+          </p>
+        </div>
 
         {/* Contact Information Section */}
-        <Card sx={{ mb: 4, boxShadow: 2 }}>
-          <CardContent sx={{ p: 4 }}>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#1976d2', borderBottom: '2px solid #1976d2', pb: 1 }}>
-              CONTACT INFORMATION
-            </Typography>
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-              <TextField
-                label="Directorate"
+        <div style={{
+          marginBottom: '2rem',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '4px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+          padding: '2rem'
+        }}>
+          <h3 style={{ 
+            marginBottom: '1.5rem', 
+            fontWeight: '600', 
+            color: '#1a365d', 
+            borderBottom: '2px solid #4a5568', 
+            paddingBottom: '0.5rem',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            fontSize: '1.1rem'
+          }}>
+            Contact Information
+          </h3>
+          
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '1.5rem' 
+          }}>
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                color: '#4a5568', 
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}>
+                Directorate *
+              </label>
+              <input
+                type="text"
                 value={formData.directorate}
                 onChange={(e) => handleFormChange('directorate', e.target.value)}
-                error={!!errors.directorate}
-                helperText={errors.directorate}
-                variant="outlined"
-                fullWidth
-                required
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                InputProps={{
-                  startAdornment: <Business sx={{ mr: 1, color: '#1976d2' }} />
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: errors.directorate ? '2px solid #e53e3e' : '1px solid #cbd5e0',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  fontFamily: 'Georgia, serif'
                 }}
               />
+              {errors.directorate && (
+                <p style={{ color: '#e53e3e', fontSize: '0.8rem', margin: '0.25rem 0 0 0' }}>
+                  {errors.directorate}
+                </p>
+              )}
+            </div>
 
-              <TextField
-                label="Section"
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                color: '#4a5568', 
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}>
+                Section *
+              </label>
+              <input
+                type="text"
                 value={formData.section}
                 onChange={(e) => handleFormChange('section', e.target.value)}
-                error={!!errors.section}
-                helperText={errors.section}
-                variant="outlined"
-                fullWidth
-                required
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-              />
-
-              <TextField
-                label="Contact Person Name"
-                value={formData.contactName}
-                onChange={(e) => handleFormChange('contactName', e.target.value)}
-                error={!!errors.contactName}
-                helperText={errors.contactName}
-                variant="outlined"
-                fullWidth
-                required
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-              />
-
-              <TextField
-                label="Phone Number"
-                value={formData.contactPhone}
-                onChange={(e) => handleFormChange('contactPhone', e.target.value)}
-                error={!!errors.contactPhone}
-                helperText={errors.contactPhone}
-                variant="outlined"
-                fullWidth
-                required
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                InputProps={{
-                  startAdornment: <Phone sx={{ mr: 1, color: '#1976d2' }} />
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: errors.section ? '2px solid #e53e3e' : '1px solid #cbd5e0',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  fontFamily: 'Georgia, serif'
                 }}
               />
+              {errors.section && (
+                <p style={{ color: '#e53e3e', fontSize: '0.8rem', margin: '0.25rem 0 0 0' }}>
+                  {errors.section}
+                </p>
+              )}
+            </div>
 
-              <TextField
-                label="Email Address"
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                color: '#4a5568', 
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}>
+                Contact Person Name *
+              </label>
+              <input
+                type="text"
+                value={formData.contactName}
+                onChange={(e) => handleFormChange('contactName', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: errors.contactName ? '2px solid #e53e3e' : '1px solid #cbd5e0',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  fontFamily: 'Georgia, serif'
+                }}
+              />
+              {errors.contactName && (
+                <p style={{ color: '#e53e3e', fontSize: '0.8rem', margin: '0.25rem 0 0 0' }}>
+                  {errors.contactName}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                color: '#4a5568', 
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}>
+                Phone Number *
+              </label>
+              <input
+                type="tel"
+                value={formData.contactPhone}
+                onChange={(e) => handleFormChange('contactPhone', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: errors.contactPhone ? '2px solid #e53e3e' : '1px solid #cbd5e0',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  fontFamily: 'Georgia, serif'
+                }}
+              />
+              {errors.contactPhone && (
+                <p style={{ color: '#e53e3e', fontSize: '0.8rem', margin: '0.25rem 0 0 0' }}>
+                  {errors.contactPhone}
+                </p>
+              )}
+            </div>
+
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                color: '#4a5568', 
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}>
+                Email Address *
+              </label>
+              <input
                 type="email"
                 value={formData.contactEmail}
                 onChange={(e) => handleFormChange('contactEmail', e.target.value)}
-                error={!!errors.contactEmail}
-                helperText={errors.contactEmail}
-                variant="outlined"
-                fullWidth
-                required
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 }, gridColumn: { md: 'span 2' } }}
-                InputProps={{
-                  startAdornment: <Email sx={{ mr: 1, color: '#1976d2' }} />
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: errors.contactEmail ? '2px solid #e53e3e' : '1px solid #cbd5e0',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  fontFamily: 'Georgia, serif'
                 }}
               />
-            </Box>
-          </CardContent>
-        </Card>
+              {errors.contactEmail && (
+                <p style={{ color: '#e53e3e', fontSize: '0.8rem', margin: '0.25rem 0 0 0' }}>
+                  {errors.contactEmail}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Item Addition Section */}
-        <Card sx={{ mb: 4, boxShadow: 2 }}>
-          <CardContent sx={{ p: 4 }}>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#1976d2', borderBottom: '2px solid #1976d2', pb: 1 }}>
-              ADD STATIONERY ITEMS
-            </Typography>
+        <div style={{
+          marginBottom: '2rem',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '4px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+          padding: '2rem'
+        }}>
+          <h3 style={{ 
+            marginBottom: '1.5rem', 
+            fontWeight: '600', 
+            color: '#1a365d', 
+            borderBottom: '2px solid #4a5568', 
+            paddingBottom: '0.5rem',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            fontSize: '1.1rem'
+          }}>
+            Add Stationery Items
+          </h3>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
-              <TextField
-                label="Item Description"
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: '1rem', 
+            marginBottom: '1.5rem' 
+          }}>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                color: '#4a5568', 
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}>
+                Item Description
+              </label>
+              <textarea
                 value={currentItem.description}
                 onChange={(e) => handleItemChange('description', e.target.value)}
-                variant="outlined"
-                fullWidth
-                multiline
-                rows={2}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                InputProps={{
-                  startAdornment: <Description sx={{ mr: 1, color: '#1976d2', alignSelf: 'flex-start', mt: 1 }} />
+                rows="2"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #cbd5e0',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  fontFamily: 'Georgia, serif',
+                  resize: 'vertical'
                 }}
               />
+            </div>
 
-              <FormControl variant="outlined" fullWidth sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}>
-                <InputLabel>Unit</InputLabel>
-                <Select
-                  value={currentItem.unit}
-                  onChange={(e) => handleItemChange('unit', e.target.value)}
-                  label="Unit"
-                >
-                  <MenuItem value="Piece">Piece</MenuItem>
-                  <MenuItem value="Box">Box</MenuItem>
-                  <MenuItem value="Pack">Pack</MenuItem>
-                  <MenuItem value="Set">Set</MenuItem>
-                  <MenuItem value="Ream">Ream</MenuItem>
-                  <MenuItem value="Carton">Carton</MenuItem>
-                </Select>
-              </FormControl>
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                color: '#4a5568', 
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}>
+                Unit
+              </label>
+              <select
+                value={currentItem.unit}
+                onChange={(e) => handleItemChange('unit', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #cbd5e0',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  fontFamily: 'Georgia, serif'
+                }}
+              >
+                <option value="">Select Unit</option>
+                <option value="Piece">Piece</option>
+                <option value="Box">Box</option>
+                <option value="Pack">Pack</option>
+                <option value="Set">Set</option>
+                <option value="Ream">Ream</option>
+                <option value="Carton">Carton</option>
+              </select>
+            </div>
 
-              <TextField
-                label="Quantity"
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                color: '#4a5568', 
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}>
+                Quantity
+              </label>
+              <input
                 type="number"
                 value={currentItem.quantity}
                 onChange={(e) => handleItemChange('quantity', e.target.value)}
-                variant="outlined"
-                fullWidth
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #cbd5e0',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  fontFamily: 'Georgia, serif'
+                }}
               />
+            </div>
 
-              <TextField
-                label="Budget (BD)"
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                color: '#4a5568', 
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}>
+                Budget (BD)
+              </label>
+              <input
                 type="number"
+                step="0.001"
                 value={currentItem.estimatedBudget}
                 onChange={(e) => handleItemChange('estimatedBudget', e.target.value)}
-                variant="outlined"
-                fullWidth
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-              />
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={currentItem.budgetAvailable}
-                      onChange={(e) => handleItemChange('budgetAvailable', e.target.checked)}
-                      sx={{ color: '#1976d2' }}
-                    />
-                  }
-                  label="Budget Available"
-                />
-
-                <Button
-                  variant="outlined"
-                  component="label"
-                  sx={{ borderRadius: 2 }}
-                >
-                  Upload Picture
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePictureChange}
-                    style={{ display: 'none' }}
-                  />
-                </Button>
-
-                {itemPicture && (
-                  <Typography variant="body2" sx={{ color: '#4caf50' }}>
-                    📷 {itemPicture.name}
-                  </Typography>
-                )}
-              </Box>
-
-              <Button
-                variant="contained"
-                onClick={handleAddItem}
-                disabled={!validateCurrentItem()}
-                startIcon={<Add />}
-                sx={{ 
-                  borderRadius: 2,
-                  px: 3,
-                  py: 1,
-                  fontWeight: 600
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #cbd5e0',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  backgroundColor: '#ffffff',
+                  fontFamily: 'Georgia, serif'
                 }}
-              >
-                Add Item
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
+              />
+            </div>
+          </div>
+
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            flexWrap: 'wrap', 
+            gap: '1rem' 
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                color: '#4a5568',
+                fontSize: '0.9rem'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={currentItem.budgetAvailable}
+                  onChange={(e) => handleItemChange('budgetAvailable', e.target.checked)}
+                  style={{ marginRight: '0.5rem' }}
+                />
+                Budget Available
+              </label>
+
+              <label style={{
+                padding: '0.5rem 1rem',
+                border: '1px solid #4a5568',
+                borderRadius: '4px',
+                backgroundColor: '#ffffff',
+                cursor: 'pointer',
+                color: '#4a5568',
+                fontSize: '0.9rem'
+              }}>
+                Upload Picture
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePictureChange}
+                  style={{ display: 'none' }}
+                />
+              </label>
+
+              {itemPicture && (
+                <span style={{ color: '#38a169', fontSize: '0.9rem' }}>
+                  📷 {itemPicture.name}
+                </span>
+              )}
+
+              {errors.itemPicture && (
+                <span style={{ color: '#e53e3e', fontSize: '0.8rem' }}>
+                  {errors.itemPicture}
+                </span>
+              )}
+            </div>
+
+            <button
+              onClick={handleAddItem}
+              disabled={!validateCurrentItem()}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: validateCurrentItem() ? '#2d3748' : '#a0aec0',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: validateCurrentItem() ? 'pointer' : 'not-allowed',
+                fontFamily: 'Georgia, serif'
+              }}
+            >
+              + Add Item
+            </button>
+          </div>
+        </div>
 
         {/* Items Table */}
         {items.length > 0 && (
-          <Card sx={{ mb: 4, boxShadow: 2 }}>
-            <CardContent sx={{ p: 4 }}>
-              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: '#1976d2', borderBottom: '2px solid #1976d2', pb: 1 }}>
-                ITEMS LIST ({items.length} items)
-              </Typography>
+          <div style={{
+            marginBottom: '2rem',
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '4px',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+            padding: '2rem'
+          }}>
+            <h3 style={{ 
+              marginBottom: '1.5rem', 
+              fontWeight: '600', 
+              color: '#1a365d', 
+              borderBottom: '2px solid #4a5568', 
+              paddingBottom: '0.5rem',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              fontSize: '1.1rem'
+            }}>
+              Items List ({items.length} items)
+            </h3>
 
-              <TableContainer component={Paper} sx={{ boxShadow: 1, borderRadius: 2 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                      <TableCell sx={{ fontWeight: 600 }}>S.No</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Unit</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Quantity</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Budget (BD)</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Budget Available</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Picture</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Action</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {items.map((item, index) => (
-                      <TableRow key={index} sx={{ '&:nth-of-type(even)': { backgroundColor: '#fafafa' } }}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{item.description}</TableCell>
-                        <TableCell>{item.unit}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.estimatedBudget}</TableCell>
-                        <TableCell>
-                          <Box sx={{ 
-                            color: item.budgetAvailable ? '#4caf50' : '#f44336',
-                            fontWeight: 600
-                          }}>
-                            {item.budgetAvailable ? '✓ Yes' : '✗ No'}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          {item.picture ? '📷 Yes' : '❌ No'}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            onClick={() => handleRemoveItem(index)}
-                            startIcon={<Delete />}
-                            sx={{ borderRadius: 2 }}
-                          >
-                            Remove
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+            <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#2d3748' }}>
+                    <th style={{ 
+                      padding: '1rem', 
+                      textAlign: 'left', 
+                      color: '#ffffff', 
+                      fontWeight: '600',
+                      fontSize: '0.9rem'
+                    }}>S.No</th>
+                    <th style={{ 
+                      padding: '1rem', 
+                      textAlign: 'left', 
+                      color: '#ffffff', 
+                      fontWeight: '600',
+                      fontSize: '0.9rem'
+                    }}>Description</th>
+                    <th style={{ 
+                      padding: '1rem', 
+                      textAlign: 'left', 
+                      color: '#ffffff', 
+                      fontWeight: '600',
+                      fontSize: '0.9rem'
+                    }}>Unit</th>
+                    <th style={{ 
+                      padding: '1rem', 
+                      textAlign: 'left', 
+                      color: '#ffffff', 
+                      fontWeight: '600',
+                      fontSize: '0.9rem'
+                    }}>Quantity</th>
+                    <th style={{ 
+                      padding: '1rem', 
+                      textAlign: 'left', 
+                      color: '#ffffff', 
+                      fontWeight: '600',
+                      fontSize: '0.9rem'
+                    }}>Budget (BD)</th>
+                    <th style={{ 
+                      padding: '1rem', 
+                      textAlign: 'left', 
+                      color: '#ffffff', 
+                      fontWeight: '600',
+                      fontSize: '0.9rem'
+                    }}>Budget Available</th>
+                    <th style={{ 
+                      padding: '1rem', 
+                      textAlign: 'left', 
+                      color: '#ffffff', 
+                      fontWeight: '600',
+                      fontSize: '0.9rem'
+                    }}>Picture</th>
+                    <th style={{ 
+                      padding: '1rem', 
+                      textAlign: 'left', 
+                      color: '#ffffff', 
+                      fontWeight: '600',
+                      fontSize: '0.9rem'
+                    }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, index) => (
+                    <tr key={index} style={{ 
+                      backgroundColor: index % 2 === 0 ? '#f7fafc' : '#ffffff',
+                      borderBottom: '1px solid #e2e8f0'
+                    }}>
+                      <td style={{ padding: '1rem', fontSize: '0.9rem' }}>{index + 1}</td>
+                      <td style={{ padding: '1rem', fontSize: '0.9rem' }}>{item.description}</td>
+                      <td style={{ padding: '1rem', fontSize: '0.9rem' }}>{item.unit}</td>
+                      <td style={{ padding: '1rem', fontSize: '0.9rem' }}>{item.quantity}</td>
+                      <td style={{ padding: '1rem', fontSize: '0.9rem', fontWeight: '600' }}>{item.estimatedBudget}</td>
+                      <td style={{ 
+                        padding: '1rem', 
+                        fontSize: '0.9rem',
+                        color: item.budgetAvailable ? '#38a169' : '#e53e3e',
+                        fontWeight: '600'
+                      }}>
+                        {item.budgetAvailable ? 'Yes' : 'No'}
+                      </td>
+                      <td style={{ padding: '1rem', fontSize: '0.9rem' }}>
+                        {item.picture ? '📷 Yes' : '❌ No'}
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <button
+                          onClick={() => handleRemoveItem(index)}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: '#e53e3e',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '0.8rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-              <Box sx={{ mt: 2, p: 2, backgroundColor: '#e3f2fd', borderRadius: 2 }}>
-                <Typography variant="body2" sx={{ color: '#1976d2' }}>
-                  <strong>Total Items:</strong> {items.length} | 
-                  <strong> Total Estimated Budget:</strong> {items.reduce((sum, item) => sum + parseFloat(item.estimatedBudget || 0), 0).toFixed(2)} BD
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+            <div style={{ 
+              marginTop: '1rem', 
+              padding: '1rem', 
+              backgroundColor: '#edf2f7', 
+              borderRadius: '4px',
+              border: '1px solid #cbd5e0'
+            }}>
+              <p style={{ color: '#2d3748', margin: '0', fontSize: '0.9rem' }}>
+                <strong>Total Items:</strong> {items.length} | {' '}
+                <strong>Total Estimated Budget:</strong> {items.reduce((sum, item) => sum + parseFloat(item.estimatedBudget || 0), 0).toFixed(3)} BD
+              </p>
+            </div>
+          </div>
         )}
 
         {/* Error Messages */}
         {errors.items && (
-          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+          <div style={{
+            marginBottom: '1.5rem',
+            padding: '1rem',
+            backgroundColor: '#fed7d7',
+            border: '1px solid #e53e3e',
+            borderRadius: '4px',
+            color: '#c53030'
+          }}>
             {errors.items}
-          </Alert>
+          </div>
         )}
 
         {/* Generate Button */}
-        <Card sx={{ boxShadow: 3 }}>
-          <CardContent sx={{ textAlign: 'center', py: 4 }}>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={generateExcel}
-              disabled={items.length === 0}
-              startIcon={<GetApp />}
-              sx={{
-                px: 6,
-                py: 2,
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                borderRadius: 3,
-                textTransform: 'uppercase',
-                boxShadow: 3,
-                '&:hover': {
-                  boxShadow: 6,
-                },
-                '&:disabled': {
-                  backgroundColor: '#ccc',
-                  color: '#666'
-                }
-              }}
-            >
-              Generate Official Excel Report
-            </Button>
-            
-            <Typography variant="body2" sx={{ mt: 2, color: '#666' }}>
-              This will generate an official Excel document with all the stationery requirements
-            </Typography>
-          </CardContent>
-        </Card>
+        <div style={{
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '4px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          padding: '2.5rem',
+          textAlign: 'center'
+        }}>
+          <button
+            onClick={generateCSV}
+            disabled={items.length === 0}
+            style={{
+              padding: '1rem 2.5rem',
+              fontSize: '1.1rem',
+              fontWeight: '700',
+              backgroundColor: items.length === 0 ? '#a0aec0' : '#1a365d',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: items.length === 0 ? 'not-allowed' : 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              fontFamily: 'Georgia, serif',
+              boxShadow: items.length === 0 ? 'none' : '0 4px 12px rgba(0,0,0,0.15)'
+            }}
+          >
+            📄 Generate Official Report
+          </button>
+          
+          <p style={{ 
+            marginTop: '1rem', 
+            color: '#4a5568', 
+            fontSize: '0.9rem',
+            margin: '1rem 0 0 0'
+          }}>
+            This will generate an official CSV document with all the stationery requirements
+          </p>
+        </div>
 
         {/* Footer */}
-        <Box sx={{ mt: 6, textAlign: 'center', py: 3, borderTop: '1px solid #ddd' }}>
-          <Typography variant="body2" sx={{ color: '#666' }}>
-            © 2025 Government Authority - Stationery Requirements Management System
-          </Typography>
-        </Box>
-      </Box>
-    </Box>
+        <div style={{ 
+          marginTop: '3rem', 
+          textAlign: 'center', 
+          padding: '1.5rem', 
+          borderTop: '1px solid #cbd5e0' 
+        }}>
+          <p style={{ color: '#4a5568', margin: '0', fontSize: '0.8rem' }}>
+            © 2025 Electricity and Water Authority - Stationery Requirements Management System
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
 
